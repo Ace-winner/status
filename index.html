@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Friend Status Tracker</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 400px; margin: 50px auto; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .friend { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; }
+        .status { font-weight: bold; }
+        .online { color: green; }
+        .offline { color: gray; }
+        button { width: 100%; padding: 10px; margin-top: 10px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h2>Who's Online?</h2>
+    <div id="login-section">
+        <input type="text" id="username" placeholder="Enter your name..." style="width: 100%; padding: 8px; margin-bottom: 10px;">
+        <button onclick="goOnline()">Join Status Room</button>
+    </div>
+
+    <div id="status-section" style="display:none;">
+        <p>You are logged in. Closing this tab sets you to offline.</p>
+        <div id="friend-list"></div>
+    </div>
+
+    <!-- Include Firebase App and Database SDKs -->
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
+
+    <script>
+        // 1. Paste YOUR Firebase Config details here
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_://firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_://firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_://appspot.com",
+            messagingSenderId: "YOUR_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        let userRef;
+
+        function goOnline() {
+            const name = document.getElementById('username').value.trim();
+            if (!name) return alert("Please enter a name");
+
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('status-section').style.display = 'block';
+
+            // Point to this user's node in the database
+            userRef = database.ref('presence/' + name);
+
+            // Set user status to online
+            userRef.set({ status: 'Online' });
+
+            // Automatically remove or update the status when the user closes the tab / disconnects
+            userRef.onDisconnect().set({ status: 'Offline' });
+
+            // Listen for changes across all friends
+            listenToStatuses();
+        }
+
+        function listenToStatuses() {
+            const listDiv = document.getElementById('friend-list');
+            database.ref('presence').on('value', (snapshot) => {
+                listDiv.innerHTML = '';
+                const data = snapshot.val();
+                
+                for (let friend in data) {
+                    const friendDiv = document.createElement('div');
+                    friendDiv.className = 'friend';
+                    
+                    const isOnline = data[friend].status === 'Online';
+                    friendDiv.innerHTML = `
+                        <span>${friend}</span>
+                        <span class="status ${isOnline ? 'online' : 'offline'}">${data[friend].status}</span>
+                    `;
+                    listDiv.appendChild(friendDiv);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
